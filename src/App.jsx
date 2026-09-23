@@ -1118,12 +1118,14 @@ export default function App() {
                   </h2>
                   <p className="muted">Questions about fit, orders, returns, or a look you are building? Our style team is ready.</p>
                   <p>
-                    <strong>True Men Flagship</strong>
+                    <strong>True Men Store, Navsari</strong>
                     <br />
                     <span className="muted">
-                      24 Linking Road, Bandra West
+                      Dudhia Talav Shopping Center Road,
                       <br />
-                      Mumbai, Maharashtra 400050
+                      Beside Ramanand Restaurant,
+                      <br />
+                      Navsari, Gujarat, India 396445
                     </span>
                   </p>
                   <p>
@@ -1135,14 +1137,15 @@ export default function App() {
                       Mon-Sat, 10 AM-8 PM
                     </span>
                   </p>
-                  <div className="map">
-                    <div>
-                      <i className="fa-solid fa-location-dot" style={{ fontSize: '28px', marginBottom: '12px' }}></i>
-                      <br />
-                      <strong>True Men · Bandra West</strong>
-                      <br />
-                      <small>Interactive map placeholder</small>
-                    </div>
+                  <div className="map" style={{ padding: 0, overflow: 'hidden', display: 'block' }}>
+                    <iframe
+                      title="True Men Store — Navsari"
+                      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3371.857785081788!2d72.92693109999999!3d20.951545599999996!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3be0f7f644cae5bb%3A0x98e2755987fa30f6!2sTrue%20Men!5e1!3m2!1sen!2sin!4v1790158740104!5m2!1sen!2sin"
+                      style={{ border: 0, width: '100%', height: '100%', minHeight: '280px', display: 'block' }}
+                      allowFullScreen
+                      loading="lazy"
+                      referrerPolicy="strict-origin-when-cross-origin"
+                    ></iframe>
                   </div>
                 </div>
                 <form className="form-grid" onSubmit={submitContact}>
@@ -1279,9 +1282,16 @@ export default function App() {
             </div>
             <div className="footer-col">
               <h4>Follow</h4>
-              <a href="#">Instagram</a>
-              <a href="#">Facebook</a>
-              <a href="#">Pinterest</a>
+              <a
+                href="https://www.instagram.com/true_men_____?utm_source=ig_web_button_share_sheet&stkn=ZDNlZDc0MzIxNw=="
+                target="_blank"
+                rel="noreferrer"
+              >
+                Instagram
+              </a>
+              <a href="https://wa.me/message/7GRGQAAWQ6V4P1" target="_blank" rel="noreferrer">
+                WhatsApp
+              </a>
             </div>
           </div>
           <div className="copyright">
