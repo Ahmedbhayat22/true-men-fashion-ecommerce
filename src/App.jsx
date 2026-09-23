@@ -429,18 +429,15 @@ export default function App() {
       <div className="topbar">Free shipping on orders above ₹2,499 &nbsp; | &nbsp; Use TRUE10 for 10% off</div>
       <header>
         <div className="container-x nav-wrap">
+          <a className="logo" href="#home">
+            TRUE <b>MEN</b>
+          </a>
           <nav className="nav-links">
             <a href="#home">Home</a>
             <a href="#shop">Shop</a>
             <a href="#about">Our Story</a>
             <a href="#contact">Contact</a>
           </nav>
-          <button className="icon-btn hamburger" onClick={() => toggleDrawer('menuDrawer')} aria-label="Menu">
-            <i className="fa-solid fa-bars"></i>
-          </button>
-          <a className="logo" href="#home">
-            TRUE <b>MEN</b>
-          </a>
           <div className="header-actions">
             <button className="icon-btn search-head" onClick={focusShopSearch} aria-label="Search">
               <i className="fa-solid fa-magnifying-glass"></i>
@@ -456,6 +453,9 @@ export default function App() {
               <span className="badge" id="cartBadge">
                 {cartCount}
               </span>
+            </button>
+            <button className="icon-btn hamburger" onClick={() => toggleDrawer('menuDrawer')} aria-label="Menu">
+              <i className="fa-solid fa-bars"></i>
             </button>
           </div>
         </div>
