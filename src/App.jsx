@@ -27,25 +27,92 @@ function parseHash() {
   return { name, id };
 }
 
-function useReveals(dep) {
+// Self-observing reveal wrapper (stable top-level identity so remounts re-trigger
+// observation instead of losing an imperatively-added class).
+function Reveal({ as: Tag = 'div', className = '', children, ...rest }) {
+  const ref = useRef(null);
   useEffect(() => {
-    const run = () => {
-      const obs = new IntersectionObserver(
-        (es) =>
-          es.forEach((e) => {
-            if (e.isIntersecting) {
-              e.target.classList.add('visible');
-              obs.unobserve(e.target);
-            }
-          }),
-        { threshold: 0.08 }
-      );
-      document.querySelectorAll('.reveal:not(.visible)').forEach((el) => obs.observe(el));
-      return () => obs.disconnect();
+    const el = ref.current;
+    if (!el) return undefined;
+    if (typeof IntersectionObserver === 'undefined') {
+      el.classList.add('visible');
+      return undefined;
+    }
+    const obs = new IntersectionObserver(
+      (es) =>
+        es.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add('visible');
+            obs.disconnect();
+          }
+        }),
+      { threshold: 0.08, rootMargin: '0px 0px 40px 0px' }
+    );
+    obs.observe(el);
+    // Safety net: never leave in-viewport content hidden if the observer stalls
+    const t = setTimeout(() => {
+      if (el.isConnected) {
+        const r = el.getBoundingClientRect();
+        if (r.top < window.innerHeight && r.bottom > 0) el.classList.add('visible');
+      }
+    }, 1200);
+    return () => {
+      clearTimeout(t);
+      obs.disconnect();
     };
-    const raf = requestAnimationFrame(run);
-    return () => cancelAnimationFrame(raf);
-  }, [dep]);
+  }, []);
+  return (
+    <Tag ref={ref} className={`reveal${className ? ` ${className}` : ''}`} {...rest}>
+      {children}
+    </Tag>
+  );
+}
+
+// Top-level so React preserves DOM nodes across App re-renders
+// (e.g. the hero autoplay tick). Defined inside App it would unmount/remount
+// every render and lose the `visible` class.
+function ProductCard({ p, wished, wishPage, onOpen, onToggleWish, onQuickAdd, onMoveToCart, onImgError }) {
+  return (
+    <Reveal as="article" className="product-card">
+      <div className="product-image" onClick={() => onOpen(p.id)}>
+        <img src={p.images[0]} className="primary" alt={p.name} loading="lazy" onError={onImgError} />
+        <img src={p.images[1]} className="secondary" alt={p.name} loading="lazy" onError={onImgError} />
+        <span className="discount">-{discount(p)}%</span>
+        <button
+          className={`heart ${wished ? 'active' : ''}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleWish(p.id);
+          }}
+          aria-label="Wishlist"
+        >
+          <i className={`${wished ? 'fa-solid' : 'fa-regular'} fa-heart`}></i>
+        </button>
+        <button
+          className="quick-add"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (wishPage) onMoveToCart(p.id);
+            else onQuickAdd(p.id);
+          }}
+        >
+          {wishPage ? 'Move to bag' : 'Quick add'}
+        </button>
+      </div>
+      <div className="product-info">
+        <span className="product-brand">{p.brand}</span>
+        <span className="rating">
+          <i className="fa-solid fa-star"></i> {p.rating}
+        </span>
+        <div className="product-name" onClick={() => onOpen(p.id)}>
+          {p.name}
+        </div>
+        <div className="price">
+          {money(p.price)} <del>{money(p.originalPrice)}</del>
+        </div>
+      </div>
+    </Reveal>
+  );
 }
 
 let toastId = 0;
@@ -140,8 +207,6 @@ export default function App() {
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, []);
-
-  useReveals(route.name + route.id + shopLoading + detailImage);
 
   const toast = useCallback((msg) => {
     const id = ++toastId;
@@ -338,52 +403,6 @@ export default function App() {
     }, 5500);
   };
 
-  function ProductCard({ p }) {
-    const wished = wishlist.includes(p.id);
-    const onWishPage = route.name === 'wishlist';
-    return (
-      <article className="product-card reveal">
-        <div className="product-image" onClick={() => openProduct(p.id)}>
-          <img src={p.images[0]} className="primary" alt={p.name} loading="lazy" onError={onImgError} />
-          <img src={p.images[1]} className="secondary" alt={p.name} loading="lazy" onError={onImgError} />
-          <span className="discount">-{discount(p)}%</span>
-          <button
-            className={`heart ${wished ? 'active' : ''}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleWishlist(p.id);
-            }}
-            aria-label="Wishlist"
-          >
-            <i className={`${wished ? 'fa-solid' : 'fa-regular'} fa-heart`}></i>
-          </button>
-          <button
-            className="quick-add"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (onWishPage) moveWishToCart(p.id);
-              else quickAdd(p.id);
-            }}
-          >
-            {onWishPage ? 'Move to bag' : 'Quick add'}
-          </button>
-        </div>
-        <div className="product-info">
-          <span className="product-brand">{p.brand}</span>
-          <span className="rating">
-            <i className="fa-solid fa-star"></i> {p.rating}
-          </span>
-          <div className="product-name" onClick={() => openProduct(p.id)}>
-            {p.name}
-          </div>
-          <div className="price">
-            {money(p.price)} <del>{money(p.originalPrice)}</del>
-          </div>
-        </div>
-      </article>
-    );
-  }
-
   const cats = [
     ['T-Shirts', imagePools['T-Shirts'][0]],
     ['Shirts', imagePools.Shirts[0]],
@@ -392,6 +411,18 @@ export default function App() {
   ];
 
   const overlayOpen = cartOpen || menuOpen || filtersOpen;
+
+  // Props shared by every product card instance
+  const cardProps = (p) => ({
+    p,
+    wished: wishlist.includes(p.id),
+    wishPage: route.name === 'wishlist',
+    onOpen: openProduct,
+    onToggleWish: toggleWishlist,
+    onQuickAdd: quickAdd,
+    onMoveToCart: moveWishToCart,
+    onImgError,
+  });
 
   return (
     <>
@@ -460,7 +491,7 @@ export default function App() {
                 </div>
               </div>
               <section className="section container-x">
-                <div className="section-head reveal">
+                <Reveal className="section-head">
                   <div>
                     <div className="eyebrow">The edit</div>
                     <h2 className="title">Shop by category</h2>
@@ -468,21 +499,21 @@ export default function App() {
                   <a href="#shop" className="btn-link">
                     View all
                   </a>
-                </div>
+                </Reveal>
                 <div className="category-grid">
                   {cats.map((c) => (
-                    <div key={c[0]} className="category-tile reveal" onClick={() => shopCategory(c[0])}>
+                    <Reveal key={c[0]} className="category-tile" onClick={() => shopCategory(c[0])}>
                       <img src={c[1]} alt={c[0]} loading="lazy" onError={onImgError} />
                       <div className="category-name">
                         <small>Explore</small>
                         {c[0]}
                       </div>
-                    </div>
+                    </Reveal>
                   ))}
                 </div>
               </section>
               <section className="section container-x" style={{ paddingTop: '20px' }}>
-                <div className="section-head reveal">
+                <Reveal className="section-head">
                   <div>
                     <div className="eyebrow">Most wanted</div>
                     <h2 className="title">Bestsellers</h2>
@@ -490,10 +521,10 @@ export default function App() {
                   <a href="#shop" className="btn-link">
                     Shop collection
                   </a>
-                </div>
+                </Reveal>
                 <div className="product-grid">
                   {products.slice(0, 8).map((p) => (
-                    <ProductCard key={p.id} p={p} />
+                    <ProductCard key={p.id} {...cardProps(p)} />
                   ))}
                 </div>
               </section>
@@ -508,7 +539,7 @@ export default function App() {
               </div>
               <section className="promo">
                 <div className="container-x">
-                  <div className="promo-copy reveal">
+                  <Reveal className="promo-copy">
                     <div className="eyebrow" style={{ color: '#ff8065' }}>
                       The weekend edit
                     </div>
@@ -517,33 +548,33 @@ export default function App() {
                     <a href="#shop" className="btn btn-light">
                       Shop the offer
                     </a>
-                  </div>
+                  </Reveal>
                 </div>
               </section>
               <section className="section container-x">
-                <div className="section-head reveal">
+                <Reveal className="section-head">
                   <div>
                     <div className="eyebrow">Real reviews</div>
                     <h2 className="title">Worn with confidence</h2>
                   </div>
-                </div>
+                </Reveal>
                 <div className="quote-grid">
-                  <blockquote className="quote reveal">
+                  <Reveal as="blockquote" className="quote">
                     “The curation is spot on. My order looked exactly like the photos, fit perfectly, and arrived two
                     days early.”<footer>Arjun Mehta · Mumbai</footer>
-                  </blockquote>
-                  <blockquote className="quote reveal">
+                  </Reveal>
+                  <Reveal as="blockquote" className="quote">
                     “Finally a store where premium brands and sensible pricing meet. The quality has been consistently
                     excellent.”<footer>Rohan Kapoor · Delhi</footer>
-                  </blockquote>
-                  <blockquote className="quote reveal">
+                  </Reveal>
+                  <Reveal as="blockquote" className="quote">
                     “True Men has become my first stop before any event. Great styles, quick delivery, and easy
                     exchanges.”<footer>Vikram S. · Bengaluru</footer>
-                  </blockquote>
+                  </Reveal>
                 </div>
               </section>
               <section className="section newsletter">
-                <div className="container-x reveal">
+                <Reveal className="container-x">
                   <div className="eyebrow">The inside word</div>
                   <h2 className="title">Good style, delivered.</h2>
                   <p className="muted" style={{ marginTop: '14px' }}>
@@ -555,7 +586,7 @@ export default function App() {
                       Join now <i className="fa-solid fa-arrow-right"></i>
                     </button>
                   </form>
-                </div>
+                </Reveal>
               </section>
             </>
           )}
@@ -729,7 +760,7 @@ export default function App() {
                           </div>
                         ))
                     ) : filteredProducts.length ? (
-                      filteredProducts.map((p) => <ProductCard key={p.id} p={p} />)
+                      filteredProducts.map((p) => <ProductCard key={p.id} {...cardProps(p)} />)
                     ) : (
                       <div className="empty">
                         <i className="fa-solid fa-magnifying-glass"></i>
@@ -887,7 +918,7 @@ export default function App() {
                     .filter((x) => x.category === currentProduct.category && x.id !== currentProduct.id)
                     .slice(0, 4)
                     .map((p) => (
-                      <ProductCard key={p.id} p={p} />
+                      <ProductCard key={p.id} {...cardProps(p)} />
                     ))}
                 </div>
               </section>
@@ -1008,7 +1039,7 @@ export default function App() {
                     {products
                       .filter((p) => wishlist.includes(p.id))
                       .map((p) => (
-                        <ProductCard key={p.id} p={p} />
+                        <ProductCard key={p.id} {...cardProps(p)} />
                       ))}
                   </div>
                 ) : (
@@ -1040,7 +1071,7 @@ export default function App() {
               </div>
               <section className="story">
                 <div className="story-image"></div>
-                <div className="story-copy reveal">
+                <Reveal className="story-copy">
                   <div className="eyebrow">Our story</div>
                   <h2>Good clothes. No guesswork.</h2>
                   <p className="muted" style={{ lineHeight: 1.8 }}>
@@ -1052,7 +1083,7 @@ export default function App() {
                     From a single store in Mumbai to wardrobes across India, our promise has stayed the same: help every
                     man look considered, comfortable, and completely himself.
                   </p>
-                </div>
+                </Reveal>
               </section>
               <div className="stats">
                 <div className="stat">
@@ -1080,21 +1111,21 @@ export default function App() {
                   </div>
                 </div>
                 <div className="why-grid">
-                  <div className="why-item reveal">
+                  <Reveal className="why-item">
                     <i className="fa-solid fa-gem"></i>
                     <h3>Curated quality</h3>
                     <p className="muted">Every piece is selected for fabric, fit, finish, and lasting relevance.</p>
-                  </div>
-                  <div className="why-item reveal">
+                  </Reveal>
+                  <Reveal className="why-item">
                     <i className="fa-solid fa-tags"></i>
                     <h3>Honest value</h3>
                     <p className="muted">Premium global labels at fair prices, without compromising authenticity.</p>
-                  </div>
-                  <div className="why-item reveal">
+                  </Reveal>
+                  <Reveal className="why-item">
                     <i className="fa-solid fa-arrows-rotate"></i>
                     <h3>Easy always</h3>
                     <p className="muted">Fast delivery, helpful support, and a simple 14-day return process.</p>
-                  </div>
+                  </Reveal>
                 </div>
               </section>
             </>
