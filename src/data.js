@@ -80,9 +80,9 @@ export const fallback =
   'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=900&q=80';
 
 export const heroImages = [
-  'https://images.unsplash.com/photo-1617137968427-85924c800a22?auto=format&fit=crop&w=2000&q=88',
-  'https://images.unsplash.com/photo-1617127365659-c47fa864d8bc?auto=format&fit=crop&w=2000&q=88',
-  'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=2000&q=88',
+  'https://images.unsplash.com/photo-1594938291221-94f18cbb5660?auto=format&fit=crop&w=2000&q=88',
+  'https://images.unsplash.com/photo-1607345366928-199ea26cfe3e?auto=format&fit=crop&w=2000&q=88',
+  'https://images.unsplash.com/photo-1715865871451-e9c1c36201b0?auto=format&fit=crop&w=2000&q=88',
 ];
 
 export const money = (n) => '₹' + Math.round(n).toLocaleString('en-IN');

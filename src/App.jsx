@@ -512,7 +512,7 @@ export default function App() {
                   ))}
                 </div>
               </section>
-              <section className="section container-x" style={{ paddingTop: '20px' }}>
+              <section className="section container-x bestsellers-section" style={{ paddingTop: '20px' }}>
                 <Reveal className="section-head">
                   <div>
                     <div className="eyebrow">Most wanted</div>
@@ -522,7 +522,7 @@ export default function App() {
                     Shop collection
                   </a>
                 </Reveal>
-                <div className="product-grid">
+                <div className="product-grid bestsellers-grid">
                   {products.slice(0, 8).map((p) => (
                     <ProductCard key={p.id} {...cardProps(p)} />
                   ))}
